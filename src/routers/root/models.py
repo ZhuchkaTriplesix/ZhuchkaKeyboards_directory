@@ -2,7 +2,7 @@ import uuid
 from uuid import UUID
 
 from sqlalchemy import types
-from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import Mapped, mapped_column
 
 from src.database.base import Base
 

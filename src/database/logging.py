@@ -28,7 +28,7 @@ class SessionTracker:
     def untrack_session(cls, session_id: str) -> None:
         """Untracks a database session."""
         if session_id in cls._sessions:
-            session_info = cls._sessions.pop(session_id)
+            cls._sessions.pop(session_id)
 
 
     @classmethod

@@ -1,11 +1,11 @@
 import logging
+
 from fastapi import FastAPI
+from sqlalchemy import text
 from starlette.middleware.cors import CORSMiddleware
-from fastapi.responses import ORJSONResponse
 
+from src.database.dependencies import DbSession
 from src.routers import Router
-
-
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,7 +24,6 @@ class App:
             docs_url=None,
             redoc_url=None,
             openapi_url="/api/openapi.json",
-            default_response_class=ORJSONResponse,
         )
         self._app.add_middleware(
             middleware_class=CORSMiddleware,
@@ -34,8 +33,16 @@ class App:
             allow_headers=["*"]
         )
 
-        self._register_routers()
+        @self._app.get("/health/live", tags=["health"])
+        async def health_live() -> dict:
+            return {"status": "ok"}
 
+        @self._app.get("/health/ready", tags=["health"])
+        async def health_ready(session: DbSession) -> dict:
+            await session.execute(text("SELECT 1"))
+            return {"status": "ready"}
+
+        self._register_routers()
 
     def _register_routers(self) -> None:
         for router, prefix, tags in Router.routers:

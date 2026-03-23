@@ -1,13 +1,12 @@
 import configparser
 import os
-from abc import ABC
 from dataclasses import asdict, dataclass
 
 config = configparser.ConfigParser()
 config.read(os.path.join(os.path.dirname(__file__), '..', 'config.ini'))
 
 
-class CfgBase(ABC):
+class CfgBase:
     dict: callable = asdict
 
 

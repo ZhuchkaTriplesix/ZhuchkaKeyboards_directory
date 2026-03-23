@@ -117,7 +117,9 @@ chmod +x start.sh
 - **API**: http://localhost:8000
 - **Swagger UI**: http://localhost:8000/api/docs (protected with HTTP Basic Auth)
 - **OpenAPI**: http://localhost:8000/api/openapi.json
-- **Health Check**: http://localhost:8000/api/root/health
+- **Health (liveness)**: http://localhost:8000/health/live
+- **Health (readiness)**: http://localhost:8000/health/ready
+- **Health (detail, DB+Redis)**: http://localhost:8000/api/root/health
 
 ## Production Deployment
 
@@ -146,6 +148,7 @@ docker compose -f docker/docker-compose.yml logs -f fastapi-app
 
 ```bash
 # Development
+make install-dev    # pip install app + pytest/cov/ruff (needed for test/lint/format)
 make dev            # Start development environment
 make logs           # View logs
 make down           # Stop all services

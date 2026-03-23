@@ -1,17 +1,11 @@
-from logging.config import fileConfig
 import asyncio
-
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-from sqlalchemy.ext.asyncio import create_async_engine
+from logging.config import fileConfig
 
 from alembic import context
+from sqlalchemy import engine_from_config, pool
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from src.database.base import Base
-from src.routers.search.models import Request
-from src.routers.settings.chime_key.models import ChimeKey
-from src.routers.settings.proxy.models import Proxy
-from src.routers.settings.error_log.models import ErrorLog
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -106,7 +100,7 @@ def run_async_migrations_online() -> None:
 
             # Run migrations in sync context
             await connection.run_sync(
-                lambda sync_conn: context.run_migrations()
+                lambda _sync_conn: context.run_migrations()
             )
 
     # Run async migrations
