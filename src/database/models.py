@@ -47,6 +47,12 @@ class Customer(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    b2b_links: Mapped[list[CustomerB2BLink]] = relationship(
+        "CustomerB2BLink",
+        back_populates="customer",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
 
 
 class CustomerAddress(Base):
@@ -107,3 +113,34 @@ class CustomerConsent(Base):
     )
 
     customer: Mapped[Customer] = relationship("Customer", back_populates="consents")
+
+
+class CustomerB2BLink(Base):
+    """Link between a customer profile and a counterparty (UUID from counterparties service)."""
+
+    __table_args__ = (
+        UniqueConstraint(
+            "customer_id",
+            "counterparty_id",
+            name="uq_customer_b2b_customer_counterparty",
+        ),
+    )
+    __repr_attrs__ = ("counterparty_id", "contact_role")
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    customer_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("customer.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    counterparty_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), index=True, nullable=False)
+    contact_role: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    customer: Mapped[Customer] = relationship("Customer", back_populates="b2b_links")

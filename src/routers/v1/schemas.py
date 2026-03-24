@@ -40,6 +40,22 @@ class MergeCustomerIn(BaseModel):
     into_customer_id: UUID
 
 
+class B2BLinkOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    customer_id: UUID
+    counterparty_id: UUID
+    contact_role: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class B2BLinkCreate(BaseModel):
+    counterparty_id: UUID
+    contact_role: str = Field(..., min_length=1, max_length=64)
+
+
 class CustomerPatch(BaseModel):
     email: EmailStr | None = None
     display_name: str | None = Field(None, max_length=255)

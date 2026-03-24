@@ -13,6 +13,8 @@ from src.routers.v1.schemas import (
     AddressCreate,
     AddressOut,
     AddressPatch,
+    B2BLinkCreate,
+    B2BLinkOut,
     ConsentOut,
     ConsentUpsert,
     CustomerListResponse,
@@ -98,6 +100,35 @@ async def upsert_consent(
     return await actions.upsert_consent(session, subject, body)
 
 
+@router.get("/me/b2b-links", response_model=list[B2BLinkOut])
+async def list_b2b_links(
+    session: DbSession, subject: UUID = Depends(current_subject)
+) -> list[B2BLinkOut]:
+    """Links from this customer to B2B counterparties (UUIDs from counterparties service)."""
+    return await actions.list_b2b_links(session, subject)
+
+
+@router.post("/me/b2b-links", response_model=B2BLinkOut)
+async def create_b2b_link(
+    session: DbSession,
+    body: B2BLinkCreate,
+    subject: UUID = Depends(current_subject),
+) -> B2BLinkOut:
+    """Register a counterparty link; duplicate (customer, counterparty) returns 409."""
+    return await actions.create_b2b_link(session, subject, body)
+
+
+@router.delete("/me/b2b-links/{link_id}", status_code=204)
+async def delete_b2b_link(
+    session: DbSession,
+    link_id: UUID,
+    subject: UUID = Depends(current_subject),
+) -> Response:
+    """Remove a B2B link owned by the current customer."""
+    await actions.delete_b2b_link(session, subject, link_id)
+    return Response(status_code=204)
+
+
 @router.get("/customers", response_model=CustomerListResponse)
 async def list_customers_staff(
     session: DbSession,
@@ -107,6 +138,10 @@ async def list_customers_staff(
         description="Case-insensitive substring match on stored email (if set)",
     ),
     subject: UUID | None = Query(None, description="Exact Auth subject (user id)"),
+    counterparty_id: UUID | None = Query(
+        None,
+        description="Filter customers linked to this counterparty (B2B)",
+    ),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ) -> CustomerListResponse:
@@ -115,6 +150,7 @@ async def list_customers_staff(
         session,
         email_contains=email,
         subject=subject,
+        counterparty_id=counterparty_id,
         limit=limit,
         offset=offset,
     )

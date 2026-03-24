@@ -10,12 +10,17 @@ from sqlalchemy import delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
-from src.database.models import Customer, CustomerAddress, CustomerConsent
+from src.database.models import Customer, CustomerAddress, CustomerB2BLink, CustomerConsent
 from src.routers.v1.dal import (
     address_add,
     address_delete,
     address_get_for_customer,
     addresses_by_customer,
+    b2b_link_add,
+    b2b_link_by_customer_counterparty,
+    b2b_link_delete,
+    b2b_link_get_for_customer,
+    b2b_links_by_customer,
     clear_other_defaults,
     consent_add,
     consent_by_customer_and_type,
@@ -31,6 +36,8 @@ from src.routers.v1.schemas import (
     AddressCreate,
     AddressOut,
     AddressPatch,
+    B2BLinkCreate,
+    B2BLinkOut,
     ConsentOut,
     ConsentUpsert,
     CustomerListResponse,
@@ -58,6 +65,16 @@ async def _dedupe_default_addresses(session: AsyncSession, customer_id: UUID) ->
         return
     for r in defaults[1:]:
         r.is_default = False
+    await session.flush()
+
+
+async def _merge_b2b_links(session: AsyncSession, source_id: UUID, into_id: UUID) -> None:
+    for link in await b2b_links_by_customer(session, source_id):
+        existing = await b2b_link_by_customer_counterparty(session, into_id, link.counterparty_id)
+        if existing is None:
+            link.customer_id = into_id
+        else:
+            await session.execute(delete(CustomerB2BLink).where(CustomerB2BLink.id == link.id))
     await session.flush()
 
 
@@ -206,11 +223,43 @@ async def upsert_consent(session: AsyncSession, subject: UUID, body: ConsentUpse
     return ConsentOut.model_validate(row)
 
 
+async def list_b2b_links(session: AsyncSession, subject: UUID) -> list[B2BLinkOut]:
+    cust = await _ensure_customer(session, subject)
+    rows = await b2b_links_by_customer(session, cust.id)
+    return [B2BLinkOut.model_validate(r) for r in rows]
+
+
+async def create_b2b_link(session: AsyncSession, subject: UUID, body: B2BLinkCreate) -> B2BLinkOut:
+    cust = await _ensure_customer(session, subject)
+    if await b2b_link_by_customer_counterparty(session, cust.id, body.counterparty_id):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="b2b_link_exists",
+        )
+    row = CustomerB2BLink(
+        customer_id=cust.id,
+        counterparty_id=body.counterparty_id,
+        contact_role=body.contact_role.strip(),
+    )
+    await b2b_link_add(session, row)
+    await session.refresh(row)
+    return B2BLinkOut.model_validate(row)
+
+
+async def delete_b2b_link(session: AsyncSession, subject: UUID, link_id: UUID) -> None:
+    cust = await _ensure_customer(session, subject)
+    row = await b2b_link_get_for_customer(session, cust.id, link_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="b2b_link_not_found")
+    await b2b_link_delete(session, row)
+
+
 async def list_customers_staff(
     session: AsyncSession,
     *,
     email_contains: str | None,
     subject: UUID | None,
+    counterparty_id: UUID | None,
     limit: int,
     offset: int,
 ) -> CustomerListResponse:
@@ -223,6 +272,7 @@ async def list_customers_staff(
         session,
         email_contains=email_q,
         subject=subject,
+        counterparty_id=counterparty_id,
         limit=limit,
         offset=offset,
     )
@@ -309,6 +359,8 @@ async def merge_customers_staff(
             else:
                 await session.execute(delete(CustomerConsent).where(CustomerConsent.id == sc.id))
     await session.flush()
+
+    await _merge_b2b_links(session, source_customer_id, into_id)
 
     await session.execute(delete(Customer).where(Customer.id == source_customer_id))
     await session.flush()

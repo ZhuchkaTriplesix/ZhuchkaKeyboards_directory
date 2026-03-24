@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database.models import Customer, CustomerAddress, CustomerConsent
+from src.database.models import Customer, CustomerAddress, CustomerB2BLink, CustomerConsent
 
 
 async def customer_by_subject(session: AsyncSession, subject: UUID) -> Customer | None:
@@ -38,11 +38,25 @@ async def customers_search(
     *,
     email_contains: str | None,
     subject: UUID | None,
+    counterparty_id: UUID | None,
     limit: int,
     offset: int,
 ) -> tuple[list[Customer], int]:
-    stmt = select(Customer).order_by(Customer.created_at.desc())
-    count_stmt = select(func.count()).select_from(Customer)
+    join_cp = counterparty_id is not None
+    stmt = select(Customer)
+    if join_cp:
+        stmt = stmt.join(
+            CustomerB2BLink,
+            CustomerB2BLink.customer_id == Customer.id,
+        ).where(CustomerB2BLink.counterparty_id == counterparty_id)
+        count_stmt = (
+            select(func.count(func.distinct(Customer.id)))
+            .select_from(Customer)
+            .join(CustomerB2BLink, CustomerB2BLink.customer_id == Customer.id)
+            .where(CustomerB2BLink.counterparty_id == counterparty_id)
+        )
+    else:
+        count_stmt = select(func.count()).select_from(Customer)
     if email_contains:
         pattern = f"%{email_contains.strip()}%"
         cond = Customer.email.ilike(pattern)
@@ -52,6 +66,9 @@ async def customers_search(
         stmt = stmt.where(Customer.subject == subject)
         count_stmt = count_stmt.where(Customer.subject == subject)
     total = (await session.execute(count_stmt)).scalar_one()
+    stmt = stmt.order_by(Customer.created_at.desc())
+    if join_cp:
+        stmt = stmt.distinct()
     stmt = stmt.limit(limit).offset(offset)
     rows = (await session.execute(stmt)).scalars().all()
     return list(rows), int(total)
@@ -146,3 +163,47 @@ async def consent_add(session: AsyncSession, row: CustomerConsent) -> CustomerCo
     session.add(row)
     await session.flush()
     return row
+
+
+async def b2b_links_by_customer(session: AsyncSession, customer_id: UUID) -> list[CustomerB2BLink]:
+    result = await session.execute(
+        select(CustomerB2BLink)
+        .where(CustomerB2BLink.customer_id == customer_id)
+        .order_by(CustomerB2BLink.created_at.asc())
+    )
+    return list(result.scalars().all())
+
+
+async def b2b_link_by_customer_counterparty(
+    session: AsyncSession, customer_id: UUID, counterparty_id: UUID
+) -> CustomerB2BLink | None:
+    result = await session.execute(
+        select(CustomerB2BLink).where(
+            CustomerB2BLink.customer_id == customer_id,
+            CustomerB2BLink.counterparty_id == counterparty_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def b2b_link_get_for_customer(
+    session: AsyncSession, customer_id: UUID, link_id: UUID
+) -> CustomerB2BLink | None:
+    result = await session.execute(
+        select(CustomerB2BLink).where(
+            CustomerB2BLink.id == link_id,
+            CustomerB2BLink.customer_id == customer_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def b2b_link_add(session: AsyncSession, row: CustomerB2BLink) -> CustomerB2BLink:
+    session.add(row)
+    await session.flush()
+    return row
+
+
+async def b2b_link_delete(session: AsyncSession, row: CustomerB2BLink) -> None:
+    await session.execute(delete(CustomerB2BLink).where(CustomerB2BLink.id == row.id))
+    await session.flush()
