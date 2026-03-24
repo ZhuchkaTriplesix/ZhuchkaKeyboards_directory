@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database.models import Customer, CustomerAddress, CustomerConsent
@@ -13,6 +13,35 @@ from src.database.models import Customer, CustomerAddress, CustomerConsent
 async def customer_by_subject(session: AsyncSession, subject: UUID) -> Customer | None:
     result = await session.execute(select(Customer).where(Customer.subject == subject))
     return result.scalar_one_or_none()
+
+
+async def customer_by_id(session: AsyncSession, customer_id: UUID) -> Customer | None:
+    result = await session.execute(select(Customer).where(Customer.id == customer_id))
+    return result.scalar_one_or_none()
+
+
+async def customers_search(
+    session: AsyncSession,
+    *,
+    email_contains: str | None,
+    subject: UUID | None,
+    limit: int,
+    offset: int,
+) -> tuple[list[Customer], int]:
+    stmt = select(Customer).order_by(Customer.created_at.desc())
+    count_stmt = select(func.count()).select_from(Customer)
+    if email_contains:
+        pattern = f"%{email_contains.strip()}%"
+        cond = Customer.email.ilike(pattern)
+        stmt = stmt.where(cond)
+        count_stmt = count_stmt.where(cond)
+    if subject is not None:
+        stmt = stmt.where(Customer.subject == subject)
+        count_stmt = count_stmt.where(Customer.subject == subject)
+    total = (await session.execute(count_stmt)).scalar_one()
+    stmt = stmt.limit(limit).offset(offset)
+    rows = (await session.execute(stmt)).scalars().all()
+    return list(rows), int(total)
 
 
 async def customer_create(session: AsyncSession, subject: UUID) -> Customer:

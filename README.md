@@ -7,6 +7,8 @@ A production-ready FastAPI boilerplate designed for rapid project setup — feat
 
 Customer directory API (see monorepo `docs/microservices/02-directory.md`): **`GET/PATCH /api/v1/me`**, **`GET/POST/PATCH/DELETE /api/v1/me/addresses`**, **`GET/POST /api/v1/me/consents`** require a **Bearer** access token from Auth (`RS256`); configure **`[AUTH]`** in `config.ini` (`JWKS_URL`, `ISSUER`, `AUDIENCE` must match the authorization server). The first successful `GET /me` creates a profile row keyed by JWT `sub`. At most one address per customer may be marked **default** (`is_default`); setting it clears `is_default` on other rows. Consents are stored per **privacy** / **marketing** with **document version**; `GET /me/consents` returns only active rows (not withdrawn).
 
+**Operational (staff):** **`GET /api/v1/customers`** and **`GET /api/v1/customers/{id}`** require the same Bearer token but JWT **`scope`** must include **`admin`** (aligned with Auth admin API until dedicated `support.read` scopes are issued).
+
 ## Features
 
 - ⚡ **FastAPI** with Python 3.13

@@ -29,6 +29,11 @@ class CustomerOut(BaseModel):
     updated_at: datetime
 
 
+class CustomerListResponse(BaseModel):
+    items: list[CustomerOut]
+    total: int
+
+
 class CustomerPatch(BaseModel):
     email: EmailStr | None = None
     display_name: str | None = Field(None, max_length=255)
@@ -123,8 +128,6 @@ class ConsentUpsert(BaseModel):
 
     @model_validator(mode="after")
     def document_version_when_granting(self) -> ConsentUpsert:
-        if self.granted and (
-            not self.document_version or not self.document_version.strip()
-        ):
+        if self.granted and (not self.document_version or not self.document_version.strip()):
             raise ValueError("document_version is required when granted is true")
         return self

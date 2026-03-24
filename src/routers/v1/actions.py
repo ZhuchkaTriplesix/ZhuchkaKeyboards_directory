@@ -19,8 +19,10 @@ from src.routers.v1.dal import (
     consent_add,
     consent_by_customer_and_type,
     consents_active_by_customer,
+    customer_by_id,
     customer_by_subject,
     customer_create,
+    customers_search,
 )
 from src.routers.v1.schemas import (
     AddressCreate,
@@ -28,6 +30,7 @@ from src.routers.v1.schemas import (
     AddressPatch,
     ConsentOut,
     ConsentUpsert,
+    CustomerListResponse,
     CustomerOut,
     CustomerPatch,
 )
@@ -176,3 +179,36 @@ async def upsert_consent(session: AsyncSession, subject: UUID, body: ConsentUpse
     await session.flush()
     await session.refresh(row)
     return ConsentOut.model_validate(row)
+
+
+async def list_customers_staff(
+    session: AsyncSession,
+    *,
+    email_contains: str | None,
+    subject: UUID | None,
+    limit: int,
+    offset: int,
+) -> CustomerListResponse:
+    email_q: str | None = None
+    if email_contains is not None:
+        stripped = email_contains.strip()
+        if stripped:
+            email_q = stripped
+    rows, total = await customers_search(
+        session,
+        email_contains=email_q,
+        subject=subject,
+        limit=limit,
+        offset=offset,
+    )
+    return CustomerListResponse(
+        items=[CustomerOut.model_validate(r) for r in rows],
+        total=total,
+    )
+
+
+async def get_customer_staff(session: AsyncSession, customer_id: UUID) -> CustomerOut:
+    row = await customer_by_id(session, customer_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="customer_not_found")
+    return CustomerOut.model_validate(row)

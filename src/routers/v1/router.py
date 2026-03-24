@@ -4,17 +4,18 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Query, Response
 
 from src.database.dependencies import DbSession
 from src.routers.v1 import actions
-from src.routers.v1.deps import current_subject
+from src.routers.v1.deps import current_subject, staff_claims
 from src.routers.v1.schemas import (
     AddressCreate,
     AddressOut,
     AddressPatch,
     ConsentOut,
     ConsentUpsert,
+    CustomerListResponse,
     CustomerOut,
     CustomerPatch,
 )
@@ -94,3 +95,35 @@ async def upsert_consent(
 ) -> ConsentOut:
     """Grant or re-grant a consent for a document version, or withdraw (``granted=false``)."""
     return await actions.upsert_consent(session, subject, body)
+
+
+@router.get("/customers", response_model=CustomerListResponse)
+async def list_customers_staff(
+    session: DbSession,
+    _claims: dict = Depends(staff_claims),
+    email: str | None = Query(
+        None,
+        description="Case-insensitive substring match on stored email (if set)",
+    ),
+    subject: UUID | None = Query(None, description="Exact Auth subject (user id)"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+) -> CustomerListResponse:
+    """Operational list (requires JWT with ``admin`` scope)."""
+    return await actions.list_customers_staff(
+        session,
+        email_contains=email,
+        subject=subject,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/customers/{customer_id}", response_model=CustomerOut)
+async def get_customer_staff(
+    session: DbSession,
+    customer_id: UUID,
+    _claims: dict = Depends(staff_claims),
+) -> CustomerOut:
+    """Operational customer card (requires JWT with ``admin`` scope)."""
+    return await actions.get_customer_staff(session, customer_id)
