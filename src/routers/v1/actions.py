@@ -22,6 +22,7 @@ from src.routers.v1.dal import (
     customer_by_id,
     customer_by_subject,
     customer_create,
+    customer_email_taken_by_other,
     customers_search,
 )
 from src.routers.v1.schemas import (
@@ -211,4 +212,40 @@ async def get_customer_staff(session: AsyncSession, customer_id: UUID) -> Custom
     row = await customer_by_id(session, customer_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="customer_not_found")
+    return CustomerOut.model_validate(row)
+
+
+async def patch_customer_staff(
+    session: AsyncSession, customer_id: UUID, body: CustomerPatch
+) -> CustomerOut:
+    row = await customer_by_id(session, customer_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="customer_not_found")
+    data = body.model_dump(exclude_unset=True)
+    if "email" in data:
+        if data["email"] is not None:
+            new_email = str(data["email"]).strip().lower()
+            current = (row.email or "").strip().lower()
+            if new_email != current and await customer_email_taken_by_other(
+                session, new_email, customer_id
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="email_already_exists",
+                )
+            row.email = new_email
+        else:
+            row.email = None
+    if "display_name" in data:
+        row.display_name = data["display_name"]
+    if "phone" in data:
+        row.phone = data["phone"]
+    if "kind" in data and data["kind"] is not None:
+        row.kind = data["kind"].value
+    if "locale" in data:
+        row.locale = data["locale"]
+    if "timezone" in data:
+        row.timezone = data["timezone"]
+    await session.flush()
+    await session.refresh(row)
     return CustomerOut.model_validate(row)

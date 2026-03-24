@@ -20,6 +20,19 @@ async def customer_by_id(session: AsyncSession, customer_id: UUID) -> Customer |
     return result.scalar_one_or_none()
 
 
+async def customer_email_taken_by_other(
+    session: AsyncSession, email: str, exclude_customer_id: UUID
+) -> bool:
+    """Case-insensitive match on stored email."""
+    result = await session.execute(
+        select(Customer.id).where(
+            func.lower(Customer.email) == email.lower(),
+            Customer.id != exclude_customer_id,
+        )
+    )
+    return result.scalar_one_or_none() is not None
+
+
 async def customers_search(
     session: AsyncSession,
     *,

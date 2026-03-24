@@ -127,3 +127,14 @@ async def get_customer_staff(
 ) -> CustomerOut:
     """Operational customer card (requires JWT with ``admin`` scope)."""
     return await actions.get_customer_staff(session, customer_id)
+
+
+@router.patch("/customers/{customer_id}", response_model=CustomerOut)
+async def patch_customer_staff(
+    session: DbSession,
+    customer_id: UUID,
+    body: CustomerPatch,
+    _claims: dict = Depends(staff_claims),
+) -> CustomerOut:
+    """Operational profile update (requires JWT with ``admin`` scope)."""
+    return await actions.patch_customer_staff(session, customer_id, body)
