@@ -69,6 +69,7 @@ Application will be available at: http://localhost:8000
 API documentation:
 - Swagger UI: http://localhost:8000/api/docs (protected)
 - OpenAPI JSON: http://localhost:8000/api/openapi.json
+- OpenAPI tags separate **Customer (self)** (`/me`, …) from **Customer (staff)** (`/customers`, …).
 
 ### Running (Production)
 

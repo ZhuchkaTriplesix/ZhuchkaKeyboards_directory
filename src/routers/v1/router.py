@@ -23,16 +23,24 @@ from src.routers.v1.schemas import (
     MergeCustomerIn,
 )
 
+TAG_SELF = "Customer (self)"
+TAG_STAFF = "Customer (staff)"
+
+self_router = APIRouter(tags=[TAG_SELF])
+staff_router = APIRouter(tags=[TAG_STAFF])
+
 router = APIRouter()
+router.include_router(self_router)
+router.include_router(staff_router)
 
 
-@router.get("/me", response_model=CustomerOut)
+@self_router.get("/me", response_model=CustomerOut)
 async def get_me(session: DbSession, subject: UUID = Depends(current_subject)) -> CustomerOut:
     """Return the current customer profile; create a stub row on first access (lazy provisioning)."""
     return await actions.get_or_create_me(session, subject)
 
 
-@router.patch("/me", response_model=CustomerOut)
+@self_router.patch("/me", response_model=CustomerOut)
 async def patch_me(
     session: DbSession,
     body: CustomerPatch,
@@ -42,7 +50,7 @@ async def patch_me(
     return await actions.patch_me(session, subject, body)
 
 
-@router.get("/me/addresses", response_model=list[AddressOut])
+@self_router.get("/me/addresses", response_model=list[AddressOut])
 async def list_addresses(
     session: DbSession, subject: UUID = Depends(current_subject)
 ) -> list[AddressOut]:
@@ -50,7 +58,7 @@ async def list_addresses(
     return await actions.list_addresses(session, subject)
 
 
-@router.post("/me/addresses", response_model=AddressOut)
+@self_router.post("/me/addresses", response_model=AddressOut)
 async def create_address(
     session: DbSession,
     body: AddressCreate,
@@ -60,7 +68,7 @@ async def create_address(
     return await actions.create_address(session, subject, body)
 
 
-@router.patch("/me/addresses/{address_id}", response_model=AddressOut)
+@self_router.patch("/me/addresses/{address_id}", response_model=AddressOut)
 async def patch_address(
     session: DbSession,
     address_id: UUID,
@@ -71,7 +79,7 @@ async def patch_address(
     return await actions.patch_address(session, subject, address_id, body)
 
 
-@router.delete("/me/addresses/{address_id}", status_code=204)
+@self_router.delete("/me/addresses/{address_id}", status_code=204)
 async def delete_address(
     session: DbSession,
     address_id: UUID,
@@ -82,7 +90,7 @@ async def delete_address(
     return Response(status_code=204)
 
 
-@router.get("/me/consents", response_model=list[ConsentOut])
+@self_router.get("/me/consents", response_model=list[ConsentOut])
 async def list_consents(
     session: DbSession, subject: UUID = Depends(current_subject)
 ) -> list[ConsentOut]:
@@ -90,7 +98,7 @@ async def list_consents(
     return await actions.list_consents(session, subject)
 
 
-@router.post("/me/consents", response_model=ConsentOut)
+@self_router.post("/me/consents", response_model=ConsentOut)
 async def upsert_consent(
     session: DbSession,
     body: ConsentUpsert,
@@ -100,7 +108,7 @@ async def upsert_consent(
     return await actions.upsert_consent(session, subject, body)
 
 
-@router.get("/me/b2b-links", response_model=list[B2BLinkOut])
+@self_router.get("/me/b2b-links", response_model=list[B2BLinkOut])
 async def list_b2b_links(
     session: DbSession, subject: UUID = Depends(current_subject)
 ) -> list[B2BLinkOut]:
@@ -108,7 +116,7 @@ async def list_b2b_links(
     return await actions.list_b2b_links(session, subject)
 
 
-@router.post("/me/b2b-links", response_model=B2BLinkOut)
+@self_router.post("/me/b2b-links", response_model=B2BLinkOut)
 async def create_b2b_link(
     session: DbSession,
     body: B2BLinkCreate,
@@ -118,7 +126,7 @@ async def create_b2b_link(
     return await actions.create_b2b_link(session, subject, body)
 
 
-@router.delete("/me/b2b-links/{link_id}", status_code=204)
+@self_router.delete("/me/b2b-links/{link_id}", status_code=204)
 async def delete_b2b_link(
     session: DbSession,
     link_id: UUID,
@@ -129,7 +137,7 @@ async def delete_b2b_link(
     return Response(status_code=204)
 
 
-@router.get("/customers", response_model=CustomerListResponse)
+@staff_router.get("/customers", response_model=CustomerListResponse)
 async def list_customers_staff(
     session: DbSession,
     _claims: dict = Depends(staff_claims),
@@ -156,7 +164,7 @@ async def list_customers_staff(
     )
 
 
-@router.get("/customers/{customer_id}", response_model=CustomerOut)
+@staff_router.get("/customers/{customer_id}", response_model=CustomerOut)
 async def get_customer_staff(
     session: DbSession,
     customer_id: UUID,
@@ -166,7 +174,7 @@ async def get_customer_staff(
     return await actions.get_customer_staff(session, customer_id)
 
 
-@router.patch("/customers/{customer_id}", response_model=CustomerOut)
+@staff_router.patch("/customers/{customer_id}", response_model=CustomerOut)
 async def patch_customer_staff(
     session: DbSession,
     customer_id: UUID,
@@ -177,7 +185,7 @@ async def patch_customer_staff(
     return await actions.patch_customer_staff(session, customer_id, body)
 
 
-@router.post("/customers/{source_customer_id}/merge", response_model=CustomerOut)
+@staff_router.post("/customers/{source_customer_id}/merge", response_model=CustomerOut)
 async def merge_customers_staff(
     session: DbSession,
     source_customer_id: UUID,

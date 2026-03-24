@@ -6,6 +6,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from src.database.dependencies import DbSession
 from src.routers import Router
+from src.routers.v1.router import TAG_SELF, TAG_STAFF
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,6 +24,16 @@ class App:
             docs_url=None,
             redoc_url=None,
             openapi_url="/api/openapi.json",
+            openapi_tags=[
+                {
+                    "name": TAG_SELF,
+                    "description": "Profile, addresses, consents, B2B links for the Bearer token subject.",
+                },
+                {
+                    "name": TAG_STAFF,
+                    "description": "Operational customer tools; JWT with staff scope (e.g. `admin`).",
+                },
+            ],
         )
         self._app.add_middleware(
             middleware_class=CORSMiddleware,

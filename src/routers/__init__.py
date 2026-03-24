@@ -8,5 +8,5 @@ from src.routers.v1.router import router as v1_router
 class Router:
     routers = [
         (root_request_router, "/api/root", ["root"]),
-        (v1_router, "/api/v1", ["v1"]),
+        (v1_router, "/api/v1", []),
     ]
