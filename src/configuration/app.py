@@ -1,17 +1,21 @@
 import logging
 
 from fastapi import FastAPI
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy import text
 from starlette.middleware.cors import CORSMiddleware
+from starlette.responses import Response
 
 from src.database.dependencies import DbSession
+from src.misc.logging_config import configure_request_id_logging
 from src.routers import Router
 from src.routers.v1.router import TAG_SELF, TAG_STAFF
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
+    format="%(asctime)s [%(levelname)s] [req=%(request_id)s] %(message)s",
 )
+configure_request_id_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -51,6 +55,15 @@ class App:
         async def health_ready(session: DbSession) -> dict:
             await session.execute(text("SELECT 1"))
             return {"status": "ready"}
+
+        @self._app.get(
+            "/metrics",
+            tags=["health"],
+            include_in_schema=False,
+            summary="Prometheus metrics",
+        )
+        async def prometheus_metrics() -> Response:
+            return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
         self._register_routers()
 
