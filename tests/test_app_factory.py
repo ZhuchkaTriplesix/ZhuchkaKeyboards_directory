@@ -6,3 +6,4 @@ from src.configuration.app import App
 def test_app_factory():
     app = App().app
     assert app.title == "Api microservice"
+    assert app.openapi_url is None

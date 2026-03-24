@@ -116,7 +116,7 @@ chmod +x start.sh
 
 - **API**: http://localhost:8000
 - **Swagger UI**: http://localhost:8000/api/docs (protected with HTTP Basic Auth)
-- **OpenAPI**: http://localhost:8000/api/openapi.json
+- **OpenAPI JSON**: http://localhost:8000/api/openapi.json (HTTP Basic — same as Swagger)
 - **Health (liveness)**: http://localhost:8000/health/live
 - **Health (readiness)**: http://localhost:8000/health/ready
 - **Health (detail, DB+Redis)**: http://localhost:8000/api/root/health

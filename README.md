@@ -5,6 +5,10 @@ Microservice based on [Reei-dp/fastapi-template](https://github.com/Reei-dp/fast
 
 A production-ready FastAPI boilerplate designed for rapid project setup — featuring clean architecture, Docker support, logging and INI-based configuration.
 
+Customer directory API (see monorepo `docs/microservices/02-directory.md`): **`GET/PATCH /api/v1/me`**, **`GET/POST/PATCH/DELETE /api/v1/me/addresses`**, **`GET/POST /api/v1/me/consents`**, **`GET/POST/DELETE /api/v1/me/b2b-links`** require a **Bearer** access token from Auth (`RS256`); configure **`[AUTH]`** in `config.ini` (`JWKS_URL`, `ISSUER`, `AUDIENCE` must match the authorization server). The first successful `GET /me` creates a profile row keyed by JWT `sub`. At most one address per customer may be marked **default** (`is_default`); setting it clears `is_default` on other rows. Consents are stored per **privacy** / **marketing** with **document version**; `GET /me/consents` returns only active rows (not withdrawn). **B2B links** store **`counterparty_id`** (UUID in counterparties service) and **`contact_role`** per customer; duplicate pair returns **409**.
+
+**Operational (staff):** **`GET /api/v1/customers`** (optional query **`counterparty_id`** to filter by B2B link), **`GET/PATCH /api/v1/customers/{id}`**, **`POST /api/v1/customers/{source_id}/merge`** require the same Bearer token but JWT **`scope`** must include **`admin`** (aligned with Auth admin API until dedicated `support.read` scopes are issued). **`PATCH`** uses the same body as self-service **`PATCH /me`**; duplicate email returns **409** `email_already_exists`. **`merge`** body: `{ "into_customer_id": "<uuid>" }` — moves addresses, consents, and B2B links into the target, then deletes the source customer.
+
 ## Features
 
 - ⚡ **FastAPI** with Python 3.13
@@ -63,8 +67,9 @@ uvicorn src.main:app --reload
 Application will be available at: http://localhost:8000
 
 API documentation:
-- Swagger UI: http://localhost:8000/api/docs (protected)
-- OpenAPI JSON: http://localhost:8000/api/openapi.json
+- Swagger UI: http://localhost:8000/api/docs (HTTP Basic — same placeholder `USERNAME` / `PASSWORD` as in `src/main.py`)
+- OpenAPI JSON: http://localhost:8000/api/openapi.json (same Basic auth; not publicly exposed without credentials)
+- OpenAPI tags separate **Customer (self)** (`/me`, …) from **Customer (staff)** (`/customers`, …).
 
 ### Running (Production)
 

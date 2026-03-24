@@ -5,6 +5,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from src.database import models as _models  # noqa: F401
 from src.database.base import Base
 
 # this is the Alembic Config object, which provides

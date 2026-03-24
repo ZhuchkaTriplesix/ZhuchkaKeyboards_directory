@@ -59,6 +59,17 @@ class RedisCfg(CfgBase):
     password: str = config["REDIS"]["PASSWORD"]
 
 
+class AuthCfg(CfgBase):
+    """JWT verification against Auth service JWKS (same ``aud`` / ``iss`` as issued tokens)."""
+
+    def __init__(self) -> None:
+        if not config.has_section("AUTH"):
+            raise ValueError("config.ini must define [AUTH] with JWKS_URL, ISSUER, AUDIENCE")
+        self.jwks_url: str = config["AUTH"]["JWKS_URL"].strip()
+        self.issuer: str = config["AUTH"]["ISSUER"].strip()
+        self.audience: str = config["AUTH"]["AUDIENCE"].strip()
+
+
 uvicorn_cfg = UvicornCfg()
 redis_cfg = RedisCfg()
 

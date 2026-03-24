@@ -5,7 +5,7 @@ from fastapi import Depends, HTTPException
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from starlette import status
-from starlette.responses import HTMLResponse
+from starlette.responses import HTMLResponse, JSONResponse
 
 from src.config import run_granian_app
 from src.configuration.app import App
@@ -36,6 +36,12 @@ async def get_current_username(credentials: HTTPBasicCredentials = Depends(HTTPB
 @app.get("/api/docs", response_class=HTMLResponse)
 async def get_docs(_username: str = Depends(get_current_username)) -> HTMLResponse:
     return get_swagger_ui_html(openapi_url="/api/openapi.json", title="docs")
+
+
+@app.get("/api/openapi.json", include_in_schema=False)
+async def get_openapi(_username: str = Depends(get_current_username)) -> JSONResponse:
+    """Same HTTP Basic credentials as ``/api/docs``; not public."""
+    return JSONResponse(app.openapi())
 
 
 if __name__ == "__main__":

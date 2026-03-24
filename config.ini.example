@@ -40,3 +40,9 @@ PORT = 6379
 DB = 0
 PASSWORD =
 
+[AUTH]
+# JWT from services/auth: JWKS URL, issuer and audience must match issued access tokens.
+JWKS_URL = http://127.0.0.1:8000/.well-known/jwks.json
+ISSUER = http://127.0.0.1:8000
+AUDIENCE = zhuchka-api
+
