@@ -11,7 +11,7 @@ def test_metrics_prometheus_text():
         r = client.get("/metrics")
     assert r.status_code == 200
     assert "text/plain" in r.headers.get("content-type", "")
-    assert b"python_info" in r.content or b"# HELP" in r.content
+    assert b"# HELP" in r.content or b"python_info" in r.content
 
 
 def test_x_request_id_echo_and_propagate():
