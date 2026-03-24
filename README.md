@@ -5,6 +5,8 @@ Microservice based on [Reei-dp/fastapi-template](https://github.com/Reei-dp/fast
 
 A production-ready FastAPI boilerplate designed for rapid project setup — featuring clean architecture, Docker support, logging and INI-based configuration.
 
+Customer directory API (see monorepo `docs/microservices/02-directory.md`): **`GET /api/v1/me`** and **`PATCH /api/v1/me`** require a **Bearer** access token from Auth (`RS256`); configure **`[AUTH]`** in `config.ini` (`JWKS_URL`, `ISSUER`, `AUDIENCE` must match the authorization server). The first successful `GET` creates a profile row keyed by JWT `sub`.
+
 ## Features
 
 - ⚡ **FastAPI** with Python 3.13
