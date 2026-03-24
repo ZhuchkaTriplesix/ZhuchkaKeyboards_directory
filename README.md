@@ -40,6 +40,7 @@ Customer directory API (see monorepo `docs/microservices/02-directory.md`): **`G
 
 - **`tests/test_jwt_decode_contract.py`** — RS256 + `decode_access_token` with a mocked JWKS signing key (no database).
 - **`tests/test_api_v1_me_integration.py`** — `GET /api/v1/me` with Bearer token; marked **`integration`**, **skipped** if Postgres is not reachable (apply migrations locally: `alembic upgrade head`).
+- **`tests/test_outbox_integration.py`** — asserts **`outbox_event`** row for **`directory.customer.created`** after **`GET /me`** (same **`integration`** marker).
 - **CI** provisions **PostgreSQL**, writes **`scripts/ci_prep_config.py`**, runs **`alembic upgrade head`**, then **pytest** so integration tests run on every PR.
 
 ## Quick Start
