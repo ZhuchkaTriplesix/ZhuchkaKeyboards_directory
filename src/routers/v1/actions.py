@@ -4,17 +4,39 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette import status
 
-from src.routers.v1.dal import customer_by_subject, customer_create
-from src.routers.v1.schemas import CustomerOut, CustomerPatch
+from src.database.models import Customer, CustomerAddress
+from src.routers.v1.dal import (
+    address_add,
+    address_delete,
+    address_get_for_customer,
+    addresses_by_customer,
+    clear_other_defaults,
+    customer_by_subject,
+    customer_create,
+)
+from src.routers.v1.schemas import (
+    AddressCreate,
+    AddressOut,
+    AddressPatch,
+    CustomerOut,
+    CustomerPatch,
+)
 
 
-async def get_or_create_me(session: AsyncSession, subject: UUID) -> CustomerOut:
+async def _ensure_customer(session: AsyncSession, subject: UUID) -> Customer:
     row = await customer_by_subject(session, subject)
     if row is None:
         row = await customer_create(session, subject)
         await session.flush()
+    return row
+
+
+async def get_or_create_me(session: AsyncSession, subject: UUID) -> CustomerOut:
+    row = await _ensure_customer(session, subject)
     return CustomerOut.model_validate(row)
 
 
@@ -38,3 +60,68 @@ async def patch_me(session: AsyncSession, subject: UUID, body: CustomerPatch) ->
     await session.flush()
     await session.refresh(row)
     return CustomerOut.model_validate(row)
+
+
+async def list_addresses(session: AsyncSession, subject: UUID) -> list[AddressOut]:
+    cust = await _ensure_customer(session, subject)
+    rows = await addresses_by_customer(session, cust.id)
+    return [AddressOut.model_validate(r) for r in rows]
+
+
+async def create_address(session: AsyncSession, subject: UUID, body: AddressCreate) -> AddressOut:
+    cust = await _ensure_customer(session, subject)
+    addr = CustomerAddress(
+        customer_id=cust.id,
+        kind=body.kind.value,
+        line1=body.line1,
+        line2=body.line2,
+        city=body.city,
+        region=body.region,
+        postal_code=body.postal_code,
+        country=body.country,
+        is_default=body.is_default,
+    )
+    addr = await address_add(session, addr)
+    if body.is_default:
+        await clear_other_defaults(session, cust.id, addr.id)
+    await session.refresh(addr)
+    return AddressOut.model_validate(addr)
+
+
+async def patch_address(
+    session: AsyncSession, subject: UUID, address_id: UUID, body: AddressPatch
+) -> AddressOut:
+    cust = await _ensure_customer(session, subject)
+    row = await address_get_for_customer(session, cust.id, address_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="address_not_found")
+    data = body.model_dump(exclude_unset=True)
+    if "kind" in data and data["kind"] is not None:
+        row.kind = data["kind"].value
+    if "line1" in data:
+        row.line1 = data["line1"]
+    if "line2" in data:
+        row.line2 = data["line2"]
+    if "city" in data:
+        row.city = data["city"]
+    if "region" in data:
+        row.region = data["region"]
+    if "postal_code" in data:
+        row.postal_code = data["postal_code"]
+    if "country" in data:
+        row.country = data["country"]
+    if "is_default" in data and data["is_default"] is not None:
+        row.is_default = data["is_default"]
+        if data["is_default"]:
+            await clear_other_defaults(session, cust.id, row.id)
+    await session.flush()
+    await session.refresh(row)
+    return AddressOut.model_validate(row)
+
+
+async def delete_address(session: AsyncSession, subject: UUID, address_id: UUID) -> None:
+    cust = await _ensure_customer(session, subject)
+    row = await address_get_for_customer(session, cust.id, address_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="address_not_found")
+    await address_delete(session, row)
