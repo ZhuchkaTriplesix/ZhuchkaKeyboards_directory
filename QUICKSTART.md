@@ -121,6 +121,8 @@ chmod +x start.sh
 - **Health (readiness)**: http://localhost:8000/health/ready
 - **Health (detail, DB+Redis)**: http://localhost:8000/api/root/health
 
+Configuration and JWT contract: [docs/CONFIGURATION.md](docs/CONFIGURATION.md), [docs/AUTH-JWT.md](docs/AUTH-JWT.md).
+
 ## Production Deployment
 
 ### Quick Deploy with Docker
@@ -128,7 +130,7 @@ chmod +x start.sh
 ```bash
 # 1. Configure production settings
 cp config.ini.example config.ini
-nano config.ini  # Set environment=production, update secrets
+nano config.ini  # Database, Redis, [AUTH] JWKS/issuer/audience — see docs/CONFIGURATION.md
 
 # 2. Start production services
 make up

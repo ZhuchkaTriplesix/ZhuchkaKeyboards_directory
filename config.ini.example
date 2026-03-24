@@ -1,5 +1,7 @@
 # FastAPI Application Configuration
-# Copy this file to config.ini and adjust values for your environment
+# Copy this file to config.ini and adjust values for your environment.
+# Full reference: docs/CONFIGURATION.md — JWT/Auth: docs/AUTH-JWT.md
+# Values are not read from OS environment variables; use this file or a mounted secret.
 
 [POSTGRES]
 # PostgreSQL database configuration
