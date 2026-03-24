@@ -21,6 +21,8 @@ Customer directory API (see monorepo `docs/microservices/02-directory.md`): **`G
 | [docs/AUTH-JWT.md](docs/AUTH-JWT.md) | JWKS validation, claims, staff `scope` (`support.*` / `admin`) |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Docker, health endpoints, production checklist |
 
+**Events:** profile and consent changes are recorded in the **`outbox_event`** table (transactional outbox): types **`directory.customer.created`**, **`directory.customer.updated`**, **`directory.consent.changed`** with JSON payloads in **`payload`**; a separate worker can publish from this table.
+
 ## Features
 
 - ⚡ **FastAPI** with Python 3.13
