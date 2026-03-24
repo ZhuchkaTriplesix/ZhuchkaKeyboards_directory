@@ -30,7 +30,6 @@ class SessionTracker:
         if session_id in cls._sessions:
             cls._sessions.pop(session_id)
 
-
     @classmethod
     def get_active_sessions(cls) -> list[dict[str, Any]]:
         """Returns information about all active sessions."""

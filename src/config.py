@@ -3,7 +3,7 @@ import os
 from dataclasses import asdict, dataclass
 
 config = configparser.ConfigParser()
-config.read(os.path.join(os.path.dirname(__file__), '..', 'config.ini'))
+config.read(os.path.join(os.path.dirname(__file__), "..", "config.ini"))
 
 
 class CfgBase:
@@ -20,11 +20,19 @@ class PostgresCfg(CfgBase):
         self.ip: str = config["POSTGRES"]["IP"]
         self.port: int = config.getint("POSTGRES", "PORT")
 
-        self.database_engine_pool_timeout: int = config.getint("POSTGRES", "DATABASE_ENGINE_POOL_TIMEOUT")
-        self.database_engine_pool_recycle: int = config.getint("POSTGRES", "DATABASE_ENGINE_POOL_RECYCLE")
+        self.database_engine_pool_timeout: int = config.getint(
+            "POSTGRES", "DATABASE_ENGINE_POOL_TIMEOUT"
+        )
+        self.database_engine_pool_recycle: int = config.getint(
+            "POSTGRES", "DATABASE_ENGINE_POOL_RECYCLE"
+        )
         self.database_engine_pool_size: int = config.getint("POSTGRES", "DATABASE_ENGINE_POOL_SIZE")
-        self.database_engine_max_overflow: int = config.getint("POSTGRES", "DATABASE_ENGINE_MAX_OVERFLOW")
-        self.database_engine_pool_ping: bool = config.getboolean("POSTGRES", "DATABASE_ENGINE_POOL_PING")
+        self.database_engine_max_overflow: int = config.getint(
+            "POSTGRES", "DATABASE_ENGINE_MAX_OVERFLOW"
+        )
+        self.database_engine_pool_ping: bool = config.getboolean(
+            "POSTGRES", "DATABASE_ENGINE_POOL_PING"
+        )
         self.database_echo: bool = config.getboolean("POSTGRES", "DATABASE_ECHO")
 
     @property
@@ -53,6 +61,7 @@ class RedisCfg(CfgBase):
 
 uvicorn_cfg = UvicornCfg()
 redis_cfg = RedisCfg()
+
 
 def granian_loop_mode(loop_name: str):
     from granian.constants import Loops
@@ -92,4 +101,3 @@ def run_granian_app(target: str) -> None:
         http=granian_http_mode(uvicorn_cfg.http),
         log_access=True,
     ).serve()
-

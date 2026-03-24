@@ -14,7 +14,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-
 class App:
     def __init__(self):
         self._app: FastAPI = FastAPI(
@@ -30,7 +29,7 @@ class App:
             allow_origins=["*"],
             allow_credentials=True,
             allow_methods=["GET", "POST", "DELETE", "PATCH", "PUT"],
-            allow_headers=["*"]
+            allow_headers=["*"],
         )
 
         @self._app.get("/health/live", tags=["health"])
@@ -47,7 +46,6 @@ class App:
     def _register_routers(self) -> None:
         for router, prefix, tags in Router.routers:
             self._app.include_router(router=router, prefix=prefix, tags=tags)
-
 
     @property
     def app(self) -> FastAPI:

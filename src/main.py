@@ -35,10 +35,7 @@ async def get_current_username(credentials: HTTPBasicCredentials = Depends(HTTPB
 
 @app.get("/api/docs", response_class=HTMLResponse)
 async def get_docs(_username: str = Depends(get_current_username)) -> HTMLResponse:
-    return get_swagger_ui_html(
-        openapi_url="/api/openapi.json",
-        title="docs"
-    )
+    return get_swagger_ui_html(openapi_url="/api/openapi.json", title="docs")
 
 
 if __name__ == "__main__":

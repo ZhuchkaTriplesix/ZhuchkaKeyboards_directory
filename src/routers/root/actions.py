@@ -46,8 +46,4 @@ async def _health(session: AsyncSession) -> HealthCheckResponse:
         status = HealthStatus.UNHEALTHY
         redis_status = f"error: {str(e)}"
 
-    return HealthCheckResponse(
-        status=status,
-        database=database_status,
-        redis=redis_status
-    )
+    return HealthCheckResponse(status=status, database=database_status, redis=redis_status)

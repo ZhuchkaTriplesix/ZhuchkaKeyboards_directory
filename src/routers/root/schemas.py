@@ -7,12 +7,14 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class HealthStatus(StrEnum):
     """Health status enum."""
+
     HEALTHY = "healthy"
     UNHEALTHY = "unhealthy"
 
 
 class ServiceStatus(StrEnum):
     """Individual service status enum."""
+
     CONNECTED = "connected"
     DISCONNECTED = "disconnected"
     ERROR = "error"
@@ -32,16 +34,6 @@ class HealthCheckResponse(BaseModel):
         }
     )
 
-    status: HealthStatus = Field(
-        ...,
-        description="Overall health status of the application"
-    )
-    database: str = Field(
-        ...,
-        description="Database connection status"
-    )
-    redis: str = Field(
-        ...,
-        description="Redis connection status"
-    )
-
+    status: HealthStatus = Field(..., description="Overall health status of the application")
+    database: str = Field(..., description="Database connection status")
+    redis: str = Field(..., description="Redis connection status")

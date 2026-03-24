@@ -67,9 +67,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
@@ -93,15 +91,12 @@ def run_async_migrations_online() -> None:
             # Use run_sync to run sync Alembic operations in async context
             await connection.run_sync(
                 lambda sync_conn: context.configure(
-                    connection=sync_conn,
-                    target_metadata=target_metadata
+                    connection=sync_conn, target_metadata=target_metadata
                 )
             )
 
             # Run migrations in sync context
-            await connection.run_sync(
-                lambda _sync_conn: context.run_migrations()
-            )
+            await connection.run_sync(lambda _sync_conn: context.run_migrations())
 
     # Run async migrations
     asyncio.run(do_run_migrations())

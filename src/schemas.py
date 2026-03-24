@@ -9,4 +9,3 @@ class User(BaseModel):
     username: str
     permissions: list[str]
     roles: list[str]
-

@@ -40,7 +40,6 @@ def create_db_engine(connection_string: str) -> AsyncEngine:
 # Create the default engine with standard timeout
 engine = create_db_engine(
     PostgresCfg().url,
-
 )
 
 
