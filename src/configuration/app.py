@@ -23,7 +23,7 @@ class App:
             version="1.0.0",
             docs_url=None,
             redoc_url=None,
-            openapi_url="/api/openapi.json",
+            openapi_url=None,
             openapi_tags=[
                 {
                     "name": TAG_SELF,

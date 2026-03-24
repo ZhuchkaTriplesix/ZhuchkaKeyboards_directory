@@ -67,8 +67,8 @@ uvicorn src.main:app --reload
 Application will be available at: http://localhost:8000
 
 API documentation:
-- Swagger UI: http://localhost:8000/api/docs (protected)
-- OpenAPI JSON: http://localhost:8000/api/openapi.json
+- Swagger UI: http://localhost:8000/api/docs (HTTP Basic — same placeholder `USERNAME` / `PASSWORD` as in `src/main.py`)
+- OpenAPI JSON: http://localhost:8000/api/openapi.json (same Basic auth; not publicly exposed without credentials)
 - OpenAPI tags separate **Customer (self)** (`/me`, …) from **Customer (staff)** (`/customers`, …).
 
 ### Running (Production)
