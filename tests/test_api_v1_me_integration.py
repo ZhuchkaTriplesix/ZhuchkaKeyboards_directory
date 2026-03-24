@@ -13,28 +13,10 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
 from jwt import PyJWK
 from jwt.algorithms import RSAAlgorithm
-from sqlalchemy import text
 from starlette.testclient import TestClient
 
 ISS = "http://127.0.0.1:8000"
 AUD = "zhuchka-api"
-
-
-@pytest.fixture(scope="session")
-def postgres_reachable() -> None:
-    """Skip integration tests if the app cannot open a DB connection."""
-    import asyncio
-
-    from src.database.core import engine
-
-    async def ping() -> None:
-        async with engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
-
-    try:
-        asyncio.run(ping())
-    except Exception as exc:
-        pytest.skip(f"Postgres not reachable for integration tests: {exc}")
 
 
 @pytest.fixture
