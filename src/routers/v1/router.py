@@ -18,6 +18,7 @@ from src.routers.v1.schemas import (
     CustomerListResponse,
     CustomerOut,
     CustomerPatch,
+    MergeCustomerIn,
 )
 
 router = APIRouter()
@@ -138,3 +139,14 @@ async def patch_customer_staff(
 ) -> CustomerOut:
     """Operational profile update (requires JWT with ``admin`` scope)."""
     return await actions.patch_customer_staff(session, customer_id, body)
+
+
+@router.post("/customers/{source_customer_id}/merge", response_model=CustomerOut)
+async def merge_customers_staff(
+    session: DbSession,
+    source_customer_id: UUID,
+    body: MergeCustomerIn,
+    _claims: dict = Depends(staff_claims),
+) -> CustomerOut:
+    """Merge duplicate profile into ``into_customer_id``; surviving row is the target."""
+    return await actions.merge_customers_staff(session, source_customer_id, body)

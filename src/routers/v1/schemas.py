@@ -34,6 +34,12 @@ class CustomerListResponse(BaseModel):
     total: int
 
 
+class MergeCustomerIn(BaseModel):
+    """Merge duplicate ``source`` customer into ``into_customer_id`` (surviving row)."""
+
+    into_customer_id: UUID
+
+
 class CustomerPatch(BaseModel):
     email: EmailStr | None = None
     display_name: str | None = Field(None, max_length=255)

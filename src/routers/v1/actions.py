@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import HTTPException
+from sqlalchemy import delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
@@ -19,6 +20,7 @@ from src.routers.v1.dal import (
     consent_add,
     consent_by_customer_and_type,
     consents_active_by_customer,
+    consents_all_by_customer,
     customer_by_id,
     customer_by_subject,
     customer_create,
@@ -34,7 +36,29 @@ from src.routers.v1.schemas import (
     CustomerListResponse,
     CustomerOut,
     CustomerPatch,
+    MergeCustomerIn,
 )
+
+
+def _consent_preferred(a: CustomerConsent, b: CustomerConsent) -> CustomerConsent:
+    """Prefer active over withdrawn; then newer ``granted_at``."""
+    a_act = a.withdrawn_at is None
+    b_act = b.withdrawn_at is None
+    if a_act != b_act:
+        return a if a_act else b
+    if a.granted_at >= b.granted_at:
+        return a
+    return b
+
+
+async def _dedupe_default_addresses(session: AsyncSession, customer_id: UUID) -> None:
+    rows = await addresses_by_customer(session, customer_id)
+    defaults = [r for r in rows if r.is_default]
+    if len(defaults) <= 1:
+        return
+    for r in defaults[1:]:
+        r.is_default = False
+    await session.flush()
 
 
 async def _ensure_customer(session: AsyncSession, subject: UUID) -> Customer:
@@ -248,4 +272,47 @@ async def patch_customer_staff(
         row.timezone = data["timezone"]
     await session.flush()
     await session.refresh(row)
+    return CustomerOut.model_validate(row)
+
+
+async def merge_customers_staff(
+    session: AsyncSession, source_customer_id: UUID, body: MergeCustomerIn
+) -> CustomerOut:
+    into_id = body.into_customer_id
+    if source_customer_id == into_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="cannot_merge_self",
+        )
+    source = await customer_by_id(session, source_customer_id)
+    if source is None or await customer_by_id(session, into_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="customer_not_found")
+
+    await session.execute(
+        update(CustomerAddress)
+        .where(CustomerAddress.customer_id == source_customer_id)
+        .values(customer_id=into_id)
+    )
+    await session.flush()
+    await _dedupe_default_addresses(session, into_id)
+
+    source_consents = await consents_all_by_customer(session, source_customer_id)
+    for sc in source_consents:
+        tc = await consent_by_customer_and_type(session, into_id, sc.consent_type)
+        if tc is None:
+            sc.customer_id = into_id
+        else:
+            keep = _consent_preferred(sc, tc)
+            if keep.id == sc.id:
+                await session.execute(delete(CustomerConsent).where(CustomerConsent.id == tc.id))
+                sc.customer_id = into_id
+            else:
+                await session.execute(delete(CustomerConsent).where(CustomerConsent.id == sc.id))
+    await session.flush()
+
+    await session.execute(delete(Customer).where(Customer.id == source_customer_id))
+    await session.flush()
+
+    row = await customer_by_id(session, into_id)
+    assert row is not None
     return CustomerOut.model_validate(row)

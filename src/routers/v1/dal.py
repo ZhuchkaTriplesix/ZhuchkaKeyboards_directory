@@ -133,6 +133,15 @@ async def consent_by_customer_and_type(
     return result.scalar_one_or_none()
 
 
+async def consents_all_by_customer(
+    session: AsyncSession, customer_id: UUID
+) -> list[CustomerConsent]:
+    result = await session.execute(
+        select(CustomerConsent).where(CustomerConsent.customer_id == customer_id)
+    )
+    return list(result.scalars().all())
+
+
 async def consent_add(session: AsyncSession, row: CustomerConsent) -> CustomerConsent:
     session.add(row)
     await session.flush()

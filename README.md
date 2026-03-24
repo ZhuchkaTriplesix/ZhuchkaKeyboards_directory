@@ -7,7 +7,7 @@ A production-ready FastAPI boilerplate designed for rapid project setup — feat
 
 Customer directory API (see monorepo `docs/microservices/02-directory.md`): **`GET/PATCH /api/v1/me`**, **`GET/POST/PATCH/DELETE /api/v1/me/addresses`**, **`GET/POST /api/v1/me/consents`** require a **Bearer** access token from Auth (`RS256`); configure **`[AUTH]`** in `config.ini` (`JWKS_URL`, `ISSUER`, `AUDIENCE` must match the authorization server). The first successful `GET /me` creates a profile row keyed by JWT `sub`. At most one address per customer may be marked **default** (`is_default`); setting it clears `is_default` on other rows. Consents are stored per **privacy** / **marketing** with **document version**; `GET /me/consents` returns only active rows (not withdrawn).
 
-**Operational (staff):** **`GET /api/v1/customers`**, **`GET/PATCH /api/v1/customers/{id}`** require the same Bearer token but JWT **`scope`** must include **`admin`** (aligned with Auth admin API until dedicated `support.read` scopes are issued). **`PATCH`** uses the same body as self-service **`PATCH /me`**; duplicate email returns **409** `email_already_exists`.
+**Operational (staff):** **`GET /api/v1/customers`**, **`GET/PATCH /api/v1/customers/{id}`**, **`POST /api/v1/customers/{source_id}/merge`** require the same Bearer token but JWT **`scope`** must include **`admin`** (aligned with Auth admin API until dedicated `support.read` scopes are issued). **`PATCH`** uses the same body as self-service **`PATCH /me`**; duplicate email returns **409** `email_already_exists`. **`merge`** body: `{ "into_customer_id": "<uuid>" }` — moves addresses and merges consent rows into the target, then deletes the source customer.
 
 ## Features
 
