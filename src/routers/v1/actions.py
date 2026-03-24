@@ -2,19 +2,23 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
-from src.database.models import Customer, CustomerAddress
+from src.database.models import Customer, CustomerAddress, CustomerConsent
 from src.routers.v1.dal import (
     address_add,
     address_delete,
     address_get_for_customer,
     addresses_by_customer,
     clear_other_defaults,
+    consent_add,
+    consent_by_customer_and_type,
+    consents_active_by_customer,
     customer_by_subject,
     customer_create,
 )
@@ -22,6 +26,8 @@ from src.routers.v1.schemas import (
     AddressCreate,
     AddressOut,
     AddressPatch,
+    ConsentOut,
+    ConsentUpsert,
     CustomerOut,
     CustomerPatch,
 )
@@ -125,3 +131,48 @@ async def delete_address(session: AsyncSession, subject: UUID, address_id: UUID)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="address_not_found")
     await address_delete(session, row)
+
+
+async def list_consents(session: AsyncSession, subject: UUID) -> list[ConsentOut]:
+    cust = await _ensure_customer(session, subject)
+    rows = await consents_active_by_customer(session, cust.id)
+    return [ConsentOut.model_validate(r) for r in rows]
+
+
+async def upsert_consent(session: AsyncSession, subject: UUID, body: ConsentUpsert) -> ConsentOut:
+    cust = await _ensure_customer(session, subject)
+    ctype = body.consent_type.value
+    now = datetime.now(UTC)
+    row = await consent_by_customer_and_type(session, cust.id, ctype)
+
+    if body.granted:
+        assert body.document_version is not None
+        ver = body.document_version.strip()
+        if row is None:
+            row = CustomerConsent(
+                customer_id=cust.id,
+                consent_type=ctype,
+                document_version=ver,
+                granted_at=now,
+                withdrawn_at=None,
+                source=body.source,
+            )
+            await consent_add(session, row)
+        else:
+            row.document_version = ver
+            row.granted_at = now
+            row.withdrawn_at = None
+            row.source = body.source
+            await session.flush()
+        await session.refresh(row)
+        return ConsentOut.model_validate(row)
+
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="consent_not_found")
+    if row.withdrawn_at is not None:
+        await session.refresh(row)
+        return ConsentOut.model_validate(row)
+    row.withdrawn_at = now
+    await session.flush()
+    await session.refresh(row)
+    return ConsentOut.model_validate(row)

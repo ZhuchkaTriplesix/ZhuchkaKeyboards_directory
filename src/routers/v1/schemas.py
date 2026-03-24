@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 
 class CustomerKind(StrEnum):
@@ -92,3 +92,39 @@ class AddressPatch(BaseModel):
         if v is None:
             return None
         return v.strip().upper()
+
+
+class ConsentType(StrEnum):
+    privacy = "privacy"
+    marketing = "marketing"
+
+
+class ConsentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    customer_id: UUID
+    consent_type: ConsentType
+    document_version: str
+    granted_at: datetime
+    withdrawn_at: datetime | None = None
+    source: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ConsentUpsert(BaseModel):
+    """Grant (or re-grant) a consent for a document version, or withdraw."""
+
+    consent_type: ConsentType
+    document_version: str | None = Field(None, max_length=64)
+    granted: bool = True
+    source: str | None = Field(None, max_length=64)
+
+    @model_validator(mode="after")
+    def document_version_when_granting(self) -> ConsentUpsert:
+        if self.granted and (
+            not self.document_version or not self.document_version.strip()
+        ):
+            raise ValueError("document_version is required when granted is true")
+        return self

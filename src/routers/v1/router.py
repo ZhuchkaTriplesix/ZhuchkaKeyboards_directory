@@ -13,6 +13,8 @@ from src.routers.v1.schemas import (
     AddressCreate,
     AddressOut,
     AddressPatch,
+    ConsentOut,
+    ConsentUpsert,
     CustomerOut,
     CustomerPatch,
 )
@@ -74,3 +76,21 @@ async def delete_address(
     """Delete an address. Order-level checks are out of scope here."""
     await actions.delete_address(session, subject, address_id)
     return Response(status_code=204)
+
+
+@router.get("/me/consents", response_model=list[ConsentOut])
+async def list_consents(
+    session: DbSession, subject: UUID = Depends(current_subject)
+) -> list[ConsentOut]:
+    """Active consents only (``withdrawn_at`` is null)."""
+    return await actions.list_consents(session, subject)
+
+
+@router.post("/me/consents", response_model=ConsentOut)
+async def upsert_consent(
+    session: DbSession,
+    body: ConsentUpsert,
+    subject: UUID = Depends(current_subject),
+) -> ConsentOut:
+    """Grant or re-grant a consent for a document version, or withdraw (``granted=false``)."""
+    return await actions.upsert_consent(session, subject, body)

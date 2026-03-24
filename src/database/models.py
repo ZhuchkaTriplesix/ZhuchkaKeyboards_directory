@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import Uuid
 
@@ -41,6 +41,12 @@ class Customer(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    consents: Mapped[list[CustomerConsent]] = relationship(
+        "CustomerConsent",
+        back_populates="customer",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
 
 
 class CustomerAddress(Base):
@@ -71,3 +77,33 @@ class CustomerAddress(Base):
     )
 
     customer: Mapped[Customer] = relationship("Customer", back_populates="addresses")
+
+
+class CustomerConsent(Base):
+    """Legal / marketing consent per customer (one row per consent_type)."""
+
+    __table_args__ = (
+        UniqueConstraint("customer_id", "consent_type", name="uq_customer_consent_customer_type"),
+    )
+    __repr_attrs__ = ("consent_type", "document_version")
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    customer_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("customer.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    consent_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    document_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    source: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    customer: Mapped[Customer] = relationship("Customer", back_populates="consents")

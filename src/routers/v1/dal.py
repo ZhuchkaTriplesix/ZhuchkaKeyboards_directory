@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database.models import Customer, CustomerAddress
+from src.database.models import Customer, CustomerAddress, CustomerConsent
 
 
 async def customer_by_subject(session: AsyncSession, subject: UUID) -> Customer | None:
@@ -63,3 +63,35 @@ async def clear_other_defaults(session: AsyncSession, customer_id: UUID, keep_id
         )
         .values(is_default=False)
     )
+
+
+async def consents_active_by_customer(
+    session: AsyncSession, customer_id: UUID
+) -> list[CustomerConsent]:
+    result = await session.execute(
+        select(CustomerConsent)
+        .where(
+            CustomerConsent.customer_id == customer_id,
+            CustomerConsent.withdrawn_at.is_(None),
+        )
+        .order_by(CustomerConsent.consent_type.asc())
+    )
+    return list(result.scalars().all())
+
+
+async def consent_by_customer_and_type(
+    session: AsyncSession, customer_id: UUID, consent_type: str
+) -> CustomerConsent | None:
+    result = await session.execute(
+        select(CustomerConsent).where(
+            CustomerConsent.customer_id == customer_id,
+            CustomerConsent.consent_type == consent_type,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def consent_add(session: AsyncSession, row: CustomerConsent) -> CustomerConsent:
+    session.add(row)
+    await session.flush()
+    return row
