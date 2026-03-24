@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Query, Response
 
 from src.database.dependencies import DbSession
 from src.routers.v1 import actions
-from src.routers.v1.deps import current_subject, staff_claims
+from src.routers.v1.deps import current_subject, staff_read_claims, staff_write_claims
 from src.routers.v1.schemas import (
     AddressCreate,
     AddressOut,
@@ -140,7 +140,7 @@ async def delete_b2b_link(
 @staff_router.get("/customers", response_model=CustomerListResponse)
 async def list_customers_staff(
     session: DbSession,
-    _claims: dict = Depends(staff_claims),
+    _claims: dict = Depends(staff_read_claims),
     email: str | None = Query(
         None,
         description="Case-insensitive substring match on stored email (if set)",
@@ -153,7 +153,7 @@ async def list_customers_staff(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ) -> CustomerListResponse:
-    """Operational list (requires JWT with ``admin`` scope)."""
+    """Operational list (JWT ``support.read`` / ``support.write`` / ``admin``)."""
     return await actions.list_customers_staff(
         session,
         email_contains=email,
@@ -168,9 +168,9 @@ async def list_customers_staff(
 async def get_customer_staff(
     session: DbSession,
     customer_id: UUID,
-    _claims: dict = Depends(staff_claims),
+    _claims: dict = Depends(staff_read_claims),
 ) -> CustomerOut:
-    """Operational customer card (requires JWT with ``admin`` scope)."""
+    """Operational customer card (JWT ``support.read`` / ``support.write`` / ``admin``)."""
     return await actions.get_customer_staff(session, customer_id)
 
 
@@ -179,9 +179,9 @@ async def patch_customer_staff(
     session: DbSession,
     customer_id: UUID,
     body: CustomerPatch,
-    _claims: dict = Depends(staff_claims),
+    _claims: dict = Depends(staff_write_claims),
 ) -> CustomerOut:
-    """Operational profile update (requires JWT with ``admin`` scope)."""
+    """Operational profile update (JWT ``support.write`` or ``admin``)."""
     return await actions.patch_customer_staff(session, customer_id, body)
 
 
@@ -190,7 +190,7 @@ async def merge_customers_staff(
     session: DbSession,
     source_customer_id: UUID,
     body: MergeCustomerIn,
-    _claims: dict = Depends(staff_claims),
+    _claims: dict = Depends(staff_write_claims),
 ) -> CustomerOut:
-    """Merge duplicate profile into ``into_customer_id``; surviving row is the target."""
+    """Merge duplicate profile into ``into_customer_id``; surviving row is the target (``support.write`` / ``admin``)."""
     return await actions.merge_customers_staff(session, source_customer_id, body)
