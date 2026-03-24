@@ -14,3 +14,4 @@ uvloop~=0.21.0
 httptools~=0.6.4
 PyJWT[crypto]~=2.9.0
 email-validator~=2.2.0
+prometheus-client~=0.21.1

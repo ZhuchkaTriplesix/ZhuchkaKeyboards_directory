@@ -73,6 +73,8 @@ API documentation:
 - OpenAPI JSON: http://localhost:8000/api/openapi.json (same Basic auth; not publicly exposed without credentials)
 - OpenAPI tags separate **Customer (self)** (`/me`, …) from **Customer (staff)** (`/customers`, …).
 
+**Observability:** **`GET /metrics`** — Prometheus exposition (process metrics; scrape from your stack). **`X-Request-ID`** — optional incoming header (alphanumeric, dots, underscores, hyphens, max 128 chars); if absent or invalid, a UUID is generated; the chosen value is always returned on the response. Application logs use the format **`[req=<id>]`** when a request id is in context (requires **`src.main:app`** so HTTP middleware is registered).
+
 ### Running (Production)
 
 ```bash
@@ -94,7 +96,8 @@ ZhuchkaKeyboards_directory/
 │   │   └── app.py                # FastAPI app initialization
 │   ├── middlewares/              # HTTP middlewares
 │   │   ├── __init__.py
-│   │   └── database.py           # Database session middleware
+│   │   ├── request_id.py         # X-Request-ID + logging context
+│   │   └── database.py           # Database session per request
 │   ├── routers/                  # API routers
 │   │   ├── __init__.py           # Router registration
 │   │   └── root/                 # Root endpoints

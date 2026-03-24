@@ -53,6 +53,28 @@ docker run -d \
 
 
 
+## Observability
+
+| Endpoint / behavior | Notes |
+|---------------------|--------|
+| `GET /metrics` | Prometheus text format (`prometheus_client`); scrape from your monitoring stack. |
+| `GET /health/live`, `GET /health/ready` | Liveness / readiness (readiness checks DB). |
+| `X-Request-ID` | Optional request header; echoed on the response. Invalid or missing values are replaced with a generated id. |
+| Logs | Root logger format includes `[req=<id>]` when the request middleware runs (`src.main:app`). |
+
+## Configuration file (`config.ini`)
+
+Production values are read from **`config.ini`** at the repository root (see `config.ini.example`). There is no separate dotenv layer: copy the example, then set at least:
+
+| Section | Keys (summary) |
+|---------|----------------|
+| `POSTGRES` | `DATABASE`, `DRIVER`, `DATABASE_NAME`, `USERNAME`, `PASSWORD`, `IP`, `PORT`, pool settings |
+| `UVICORN` / Granian | `HOST`, `PORT`, `WORKERS`, `LOOP`, `HTTP` |
+| `REDIS` | `HOST`, `PORT`, `DB`, `PASSWORD` |
+| `AUTH` | `JWKS_URL`, `ISSUER`, `AUDIENCE` (must match Auth service) |
+
+HTTP Basic credentials for `/api/docs` and `/api/openapi.json` are **placeholders in `src/main.py`** — replace for production or move to configuration.
+
 ## Production Checklist
 
 Before deploying to production, ensure:

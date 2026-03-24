@@ -1,4 +1,3 @@
-import logging
 import secrets
 
 from fastapi import Depends, HTTPException
@@ -9,14 +8,13 @@ from starlette.responses import HTMLResponse, JSONResponse
 
 from src.config import run_granian_app
 from src.configuration.app import App
-from src.middlewares import db_session_middleware
-
-logging.basicConfig(level=logging.INFO)
+from src.middlewares import db_session_middleware, request_id_middleware
 
 app = App().app
 
-# Register middleware
+# Outermost last: request id → db session
 app.middleware("http")(db_session_middleware)
+app.middleware("http")(request_id_middleware)
 
 
 async def get_current_username(credentials: HTTPBasicCredentials = Depends(HTTPBasic())) -> str:
