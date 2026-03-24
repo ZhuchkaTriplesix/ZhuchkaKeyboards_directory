@@ -11,14 +11,15 @@ Directory validates **OAuth2 access tokens** issued by **Zhuchka Auth** (`servic
 
 Configuration keys: `JWKS_URL`, `ISSUER`, `AUDIENCE` — see [CONFIGURATION.md](CONFIGURATION.md).
 
-## Scopes (current behaviour)
+## Scopes (staff)
 
 | Surface | Requirement |
-|--------|-------------|
-| **Self-service** `/api/v1/me`, `/me/addresses`, `/me/consents`, `/me/b2b-links` | Valid Bearer access token; **no** extra scope checked in code beyond successful JWT validation. Product policy may require `profile` / `customer` on the Auth client — enforce in Auth and document for clients. |
-| **Staff** `/api/v1/customers`, `/api/v1/customers/{id}`, merge | JWT **`scope`** must include **`admin`** (space-separated scopes). Returns **403** `insufficient_scope` otherwise. |
+|--------|---------------|
+| **Self-service** `/api/v1/me`, `/me/addresses`, `/me/consents`, `/me/b2b-links` | Valid Bearer access token; no extra scope checked in this service beyond successful JWT validation. Product policy may require `profile` / `customer` on the Auth client — enforce in Auth and document for clients. |
+| **Staff** `GET /api/v1/customers`, `GET /api/v1/customers/{id}` | JWT **`scope`** (space-separated) includes **`admin`** or **`support.read`** or **`support.write`**. Returns **403** `insufficient_scope` otherwise. |
+| **Staff** `PATCH /api/v1/customers/{id}`, `POST …/merge` | **`admin`** or **`support.write`**. |
 
-Future alignment with `docs/microservices/02-directory.md`: optional split into `support.read` / `support.write` — tracked separately; update this file when implemented.
+The Auth bootstrap OAuth client should list `support.read` and `support.write` in **allowed_scopes** if you mint staff tokens from that client.
 
 ## Operational notes
 

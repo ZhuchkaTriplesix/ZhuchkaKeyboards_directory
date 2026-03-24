@@ -35,7 +35,7 @@ class App:
                 },
                 {
                     "name": TAG_STAFF,
-                    "description": "Operational customer tools; JWT with staff scope (e.g. `admin`).",
+                    "description": "Operational customer tools; JWT `support.read`/`support.write` or `admin` (see docs/AUTH-JWT.md).",
                 },
             ],
         )

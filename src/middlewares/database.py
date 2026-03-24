@@ -16,7 +16,7 @@ async def db_session_middleware(request: Request, call_next):
 
     Args:
         request: The incoming request
-        call_next: The next middleware/endpoint in the chain
+        call_next: The next middleware/endpoint in the stack
 
     Returns:
         Response from the next handler

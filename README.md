@@ -7,16 +7,18 @@ A production-ready FastAPI boilerplate designed for rapid project setup — feat
 
 Customer directory API (see monorepo `docs/microservices/02-directory.md`): **`GET/PATCH /api/v1/me`**, **`GET/POST/PATCH/DELETE /api/v1/me/addresses`**, **`GET/POST /api/v1/me/consents`**, **`GET/POST/DELETE /api/v1/me/b2b-links`** require a **Bearer** access token from Auth (`RS256`); configure **`[AUTH]`** in `config.ini` (`JWKS_URL`, `ISSUER`, `AUDIENCE` must match the authorization server). The first successful `GET /me` creates a profile row keyed by JWT `sub`. At most one address per customer may be marked **default** (`is_default`); setting it clears `is_default` on other rows. Consents are stored per **privacy** / **marketing** with **document version**; `GET /me/consents` returns only active rows (not withdrawn). **B2B links** store **`counterparty_id`** (UUID in counterparties service) and **`contact_role`** per customer; duplicate pair returns **409**.
 
-**Operational (staff):** same Bearer token; JWT **`scope`** must include **`support.read`** or **`support.write`** or **`admin`** for **`GET /api/v1/customers`** and **`GET /api/v1/customers/{id}`**; **`support.write`** or **`admin`** for **`PATCH`** and **`POST …/merge`**. **`GET /customers`** supports optional **`counterparty_id`**. **`PATCH`** uses the same body as **`PATCH /me`**; duplicate email returns **409** `email_already_exists`. **`merge`** body: `{ "into_customer_id": "<uuid>" }` — moves addresses, consents, and B2B links into the target, then deletes the source customer.
+**Operational (staff):** same Bearer token; JWT **`scope`** must include **`support.read`** or **`support.write`** or **`admin`** for **`GET /api/v1/customers`** and **`GET /api/v1/customers/{id}`**; **`support.write`** or **`admin`** for **`PATCH`** and **`POST …/merge`**. **`GET /customers`** supports optional **`counterparty_id`**. Details: [docs/AUTH-JWT.md](docs/AUTH-JWT.md). **`PATCH`** uses the same body as **`PATCH /me`**; duplicate email returns **409** `email_already_exists`. **`merge`** body: `{ "into_customer_id": "<uuid>" }` — moves addresses, consents, and B2B links into the target, then deletes the source customer.
 
 **Integration events (outbox):** rows in **`outbox_event`** with types **`directory.customer.created`**, **`directory.customer.updated`**, **`directory.consent.changed`** (JSON payload; published by a separate worker — not part of this service yet).
+
+**Observability:** **`GET /metrics`** (Prometheus), **`X-Request-ID`** on responses, logs include **`[req=…]`** when the id is set.
 
 ## Documentation
 
 | Doc | Content |
 |-----|---------|
 | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | `config.ini` sections (`POSTGRES`, `UVICORN`, `REDIS`, `AUTH`) |
-| [docs/AUTH-JWT.md](docs/AUTH-JWT.md) | JWKS validation, claims, staff `scope` (`admin`) |
+| [docs/AUTH-JWT.md](docs/AUTH-JWT.md) | JWKS validation, claims, staff `scope` (`support.*` / `admin`) |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Docker, health endpoints, production checklist |
 
 ## Features
