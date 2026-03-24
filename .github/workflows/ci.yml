@@ -18,6 +18,20 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PYTHONPATH: ${{ github.workspace }}
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: zhuchka
+          POSTGRES_PASSWORD: zhuchka
+          POSTGRES_DB: zhuchka_directory_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U zhuchka -d zhuchka_directory_test"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
     steps:
       - uses: actions/checkout@v4
 
@@ -35,8 +49,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-dev.txt
 
-      - name: Config for tests
-        run: cp config.ini.example config.ini
+      - name: Config for CI (Postgres service)
+        run: python scripts/ci_prep_config.py
+
+      - name: Alembic config
+        run: cp alembic.ini.example alembic.ini
+
+      - name: Database migrations
+        run: alembic upgrade head
 
       - name: Ruff check
         run: ruff check .

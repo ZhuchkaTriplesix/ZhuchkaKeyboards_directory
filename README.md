@@ -22,7 +22,13 @@ Customer directory API (see monorepo `docs/microservices/02-directory.md`): **`G
 - 🧪 **Pytest** for testing
 - 📊 **Logging** configured and ready to use
 - 🔧 **Makefile** for convenient development
-- 🔄 **GitHub Actions**: pytest + Docker build (`.github/workflows/ci.yml`)
+- 🔄 **GitHub Actions**: Ruff, pytest (with Postgres + Alembic), Docker build (`.github/workflows/ci.yml`)
+
+## Testing
+
+- **`tests/test_jwt_decode_contract.py`** — RS256 + `decode_access_token` with a mocked JWKS signing key (no database).
+- **`tests/test_api_v1_me_integration.py`** — `GET /api/v1/me` with Bearer token; marked **`integration`**, **skipped** if Postgres is not reachable (apply migrations locally: `alembic upgrade head`).
+- **CI** provisions **PostgreSQL**, writes **`scripts/ci_prep_config.py`**, runs **`alembic upgrade head`**, then **pytest** so integration tests run on every PR.
 
 ## Quick Start
 
