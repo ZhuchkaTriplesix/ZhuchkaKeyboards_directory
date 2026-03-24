@@ -11,6 +11,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 from src.database.models import Customer, CustomerAddress, CustomerB2BLink, CustomerConsent
+from src.events.outbox import enqueue_outbox
+from src.events.schemas import (
+    DIRECTORY_CONSENT_CHANGED,
+    DIRECTORY_CUSTOMER_CREATED,
+    DIRECTORY_CUSTOMER_UPDATED,
+    ConsentChangedPayload,
+    CustomerCreatedPayload,
+    CustomerUpdatedPayload,
+    payload_to_json,
+)
 from src.routers.v1.dal import (
     address_add,
     address_delete,
@@ -68,6 +78,28 @@ async def _dedupe_default_addresses(session: AsyncSession, customer_id: UUID) ->
     await session.flush()
 
 
+async def _emit_consent_changed(
+    session: AsyncSession,
+    customer_id: UUID,
+    consent_type: str,
+    *,
+    document_version: str | None,
+    granted: bool,
+) -> None:
+    await enqueue_outbox(
+        session,
+        DIRECTORY_CONSENT_CHANGED,
+        payload_to_json(
+            ConsentChangedPayload(
+                customer_id=customer_id,
+                consent_type=consent_type,
+                document_version=document_version,
+                granted=granted,
+            ),
+        ),
+    )
+
+
 async def _merge_b2b_links(session: AsyncSession, source_id: UUID, into_id: UUID) -> None:
     for link in await b2b_links_by_customer(session, source_id):
         existing = await b2b_link_by_customer_counterparty(session, into_id, link.counterparty_id)
@@ -83,6 +115,13 @@ async def _ensure_customer(session: AsyncSession, subject: UUID) -> Customer:
     if row is None:
         row = await customer_create(session, subject)
         await session.flush()
+        await enqueue_outbox(
+            session,
+            DIRECTORY_CUSTOMER_CREATED,
+            payload_to_json(
+                CustomerCreatedPayload(customer_id=row.id, subject=row.subject),
+            ),
+        )
     return row
 
 
@@ -93,8 +132,18 @@ async def get_or_create_me(session: AsyncSession, subject: UUID) -> CustomerOut:
 
 async def patch_me(session: AsyncSession, subject: UUID, body: CustomerPatch) -> CustomerOut:
     row = await customer_by_subject(session, subject)
+    created = False
     if row is None:
         row = await customer_create(session, subject)
+        await session.flush()
+        await enqueue_outbox(
+            session,
+            DIRECTORY_CUSTOMER_CREATED,
+            payload_to_json(
+                CustomerCreatedPayload(customer_id=row.id, subject=row.subject),
+            ),
+        )
+        created = True
     data = body.model_dump(exclude_unset=True)
     if "email" in data:
         row.email = str(data["email"]) if data["email"] is not None else None
@@ -110,6 +159,14 @@ async def patch_me(session: AsyncSession, subject: UUID, body: CustomerPatch) ->
         row.timezone = data["timezone"]
     await session.flush()
     await session.refresh(row)
+    if not created and data:
+        await enqueue_outbox(
+            session,
+            DIRECTORY_CUSTOMER_UPDATED,
+            payload_to_json(
+                CustomerUpdatedPayload(customer_id=row.id, subject=row.subject),
+            ),
+        )
     return CustomerOut.model_validate(row)
 
 
@@ -210,6 +267,13 @@ async def upsert_consent(session: AsyncSession, subject: UUID, body: ConsentUpse
             row.source = body.source
             await session.flush()
         await session.refresh(row)
+        await _emit_consent_changed(
+            session,
+            cust.id,
+            ctype,
+            document_version=row.document_version,
+            granted=True,
+        )
         return ConsentOut.model_validate(row)
 
     if row is None:
@@ -220,6 +284,13 @@ async def upsert_consent(session: AsyncSession, subject: UUID, body: ConsentUpse
     row.withdrawn_at = now
     await session.flush()
     await session.refresh(row)
+    await _emit_consent_changed(
+        session,
+        cust.id,
+        ctype,
+        document_version=row.document_version,
+        granted=False,
+    )
     return ConsentOut.model_validate(row)
 
 
@@ -296,6 +367,8 @@ async def patch_customer_staff(
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="customer_not_found")
     data = body.model_dump(exclude_unset=True)
+    if not data:
+        return CustomerOut.model_validate(row)
     if "email" in data:
         if data["email"] is not None:
             new_email = str(data["email"]).strip().lower()
@@ -322,6 +395,13 @@ async def patch_customer_staff(
         row.timezone = data["timezone"]
     await session.flush()
     await session.refresh(row)
+    await enqueue_outbox(
+        session,
+        DIRECTORY_CUSTOMER_UPDATED,
+        payload_to_json(
+            CustomerUpdatedPayload(customer_id=row.id, subject=row.subject),
+        ),
+    )
     return CustomerOut.model_validate(row)
 
 
@@ -367,4 +447,11 @@ async def merge_customers_staff(
 
     row = await customer_by_id(session, into_id)
     assert row is not None
+    await enqueue_outbox(
+        session,
+        DIRECTORY_CUSTOMER_UPDATED,
+        payload_to_json(
+            CustomerUpdatedPayload(customer_id=row.id, subject=row.subject),
+        ),
+    )
     return CustomerOut.model_validate(row)

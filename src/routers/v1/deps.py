@@ -37,10 +37,31 @@ def _scope_set(claims: dict[str, Any]) -> set[str]:
     return {p for p in str(raw).split() if p}
 
 
-async def staff_claims(token: str = Depends(bearer_token)) -> dict[str, Any]:
-    """Operational routes: require ``admin`` in JWT ``scope`` (same convention as Auth admin API)."""
+def _has_staff_read(scopes: set[str]) -> bool:
+    """Read staff routes: ``admin``, ``support.read``, or ``support.write``."""
+    return "admin" in scopes or "support.read" in scopes or "support.write" in scopes
+
+
+def _has_staff_write(scopes: set[str]) -> bool:
+    """Write staff routes: ``admin`` or ``support.write``."""
+    return "admin" in scopes or "support.write" in scopes
+
+
+async def staff_read_claims(token: str = Depends(bearer_token)) -> dict[str, Any]:
+    """List/get customers: ``support.read`` or ``support.write`` or ``admin`` in JWT ``scope``."""
     claims = decode_access_token(token)
-    if "admin" not in _scope_set(claims):
+    if not _has_staff_read(_scope_set(claims)):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="insufficient_scope",
+        )
+    return claims
+
+
+async def staff_write_claims(token: str = Depends(bearer_token)) -> dict[str, Any]:
+    """Patch/merge customers: ``support.write`` or ``admin`` in JWT ``scope``."""
+    claims = decode_access_token(token)
+    if not _has_staff_write(_scope_set(claims)):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="insufficient_scope",
