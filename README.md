@@ -9,6 +9,14 @@ Customer directory API (see monorepo `docs/microservices/02-directory.md`): **`G
 
 **Operational (staff):** **`GET /api/v1/customers`** (optional query **`counterparty_id`** to filter by B2B link), **`GET/PATCH /api/v1/customers/{id}`**, **`POST /api/v1/customers/{source_id}/merge`** require the same Bearer token but JWT **`scope`** must include **`admin`** (aligned with Auth admin API until dedicated `support.read` scopes are issued). **`PATCH`** uses the same body as self-service **`PATCH /me`**; duplicate email returns **409** `email_already_exists`. **`merge`** body: `{ "into_customer_id": "<uuid>" }` — moves addresses, consents, and B2B links into the target, then deletes the source customer.
 
+## Documentation
+
+| Doc | Content |
+|-----|---------|
+| [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | `config.ini` sections (`POSTGRES`, `UVICORN`, `REDIS`, `AUTH`) |
+| [docs/AUTH-JWT.md](docs/AUTH-JWT.md) | JWKS validation, claims, staff `scope` (`admin`) |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Docker, health endpoints, production checklist |
+
 ## Features
 
 - ⚡ **FastAPI** with Python 3.13

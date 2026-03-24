@@ -4,8 +4,16 @@ This guide covers different deployment methods for your FastAPI application.
 
 ## Table of Contents
 
+- [Configuration](#configuration)
 - [Docker Deployment](#docker-deployment)
+- [Health](#health)
 - [Production Checklist](#production-checklist)
+
+## Configuration
+
+- **Application and database settings** — single file **`config.ini`** (see [`config.ini.example`](config.ini.example) and [docs/CONFIGURATION.md](docs/CONFIGURATION.md)). Mount or generate this file per environment; there is no `.env` loader in code.
+- **JWT / Auth** — [docs/AUTH-JWT.md](docs/AUTH-JWT.md) describes JWKS, issuer, audience, and staff `scope` expectations.
+- **Alembic** — copy `alembic.ini.example` to `alembic.ini` and run `alembic upgrade head` after deploy.
 
 ## Docker Deployment
 
@@ -34,6 +42,11 @@ docker compose -f docker/docker-compose.yml logs -f
 docker compose -f docker/docker-compose.yml exec fastapi-app alembic upgrade head
 ```
 
+## Health
+
+- **`GET /health/live`** — process up (no dependency checks).
+- **`GET /health/ready`** — includes a database check (`SELECT 1`); use for orchestrator readiness when Postgres is required.
+
 ### Using Docker only
 
 1. **Build image:**
@@ -59,8 +72,9 @@ Before deploying to production, ensure:
 
 ### Security
 
-- [ ] Changed `secret_key` in config.ini to a strong random value
-- [ ] Set `debug = false` in config.ini
+- [ ] Strong **database** credentials and least-privilege DB user for the service
+- [ ] **`[AUTH]`** `JWKS_URL` / `ISSUER` / `AUDIENCE` point to production Auth and match issued tokens
+- [ ] HTTP Basic credentials for **`/api/docs`** and **`/api/openapi.json`** in `src/main.py` replaced or removed for production (or protect behind Traefik/mTLS)
 - [ ] Updated database credentials
 - [ ] Configured CORS origins properly
 - [ ] Set up SSL/TLS certificates for HTTPS
@@ -70,7 +84,7 @@ Before deploying to production, ensure:
 
 ### Configuration
 
-- [ ] Set `environment = production` in config.ini
+- [ ] Tune **`[POSTGRES]`** pool settings for expected load (`DATABASE_ENGINE_POOL_SIZE`, etc.)
 - [ ] Configure proper database connection pooling
 - [ ] Set appropriate log levels
 - [ ] Configure Redis connection
